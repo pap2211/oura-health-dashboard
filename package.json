@@ -1,0 +1,24 @@
+{
+  "name": "oura-health-dashboard",
+  "version": "1.0.0",
+  "description": "AI-powered Oura Ring health dashboard with global access",
+  "main": "index.html",
+  "scripts": {
+    "dev": "node server-with-proxy.js",
+    "build": "echo 'Static build - no build step needed'",
+    "start": "node server-with-proxy.js"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "oura",
+    "health",
+    "dashboard",
+    "fitness",
+    "wellness"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

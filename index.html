@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oura Health Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="css/styles.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header -->
+        <header class="row header-gradient text-white py-4 mb-4">
+            <div class="col text-center">
+                <h1 class="mb-2">
+                    <i class="fas fa-circle me-2" style="opacity: 0.8;"></i>
+                    Oura Health Dashboard
+                </h1>
+                <p class="mb-0">Your Personal Health Insights</p>
+            </div>
+        </header>
+
+        <!-- API Token Setup (shown when no token is stored) -->
+        <div id="token-setup" class="row mb-4" style="display: none;">
+            <div class="col-12">
+                <div class="card token-setup-card">
+                    <div class="card-header text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-key me-2"></i>
+                            Oura API Setup Required
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p>To get started, you need to create a Personal Access Token from your Oura account:</p>
+                        <ol>
+                            <li>Go to <a href="https://cloud.ouraring.com/personal-access-tokens" target="_blank">Oura Personal Access Tokens</a></li>
+                            <li>Create a new token with a descriptive name</li>
+                            <li>Copy the token and paste it below</li>
+                        </ol>
+                        <div class="input-group mb-3">
+                            <input type="password" class="form-control" id="api-token" placeholder="Paste your Oura Personal Access Token here">
+                            <button class="btn btn-primary" type="button" id="save-token">
+                                <i class="fas fa-save me-2"></i>Save Token
+                            </button>
+                        </div>
+                        <small class="text-muted">Your token is stored securely in your browser's local storage.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="row" style="display: none;">
+            <div class="col-12 text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Fetching your Oura data...</p>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="error" class="row" style="display: none;">
+            <div class="col-12">
+                <div class="alert alert-danger" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="error-message">Unable to fetch data from Oura API</span>
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-3" id="retry-btn">
+                        <i class="fas fa-redo me-1"></i>Retry
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Date Navigation -->
+        <div id="date-navigation" class="row mb-4" style="display: none;">
+            <div class="col-12">
+                <div class="date-nav-card">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <button class="btn" id="prev-day">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                        </div>
+                        <div class="col text-center">
+                            <input type="date" class="form-control d-inline-block w-auto mb-2" id="selected-date">
+                            <h5 class="mt-1 mb-0" id="date-display">Today</h5>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn" id="next-day">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard -->
+        <div id="dashboard" class="row" style="display: none;">
+            <!-- Health Metrics Cards -->
+            <div class="col-12 mb-4">
+                <div class="row g-4" id="metrics-cards">
+                    <!-- Sleep Card -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card oura-card h-100 sleep-theme">
+                            <div class="card-header text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-bed me-2"></i>Sleep Score
+                                </h6>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="score-container">
+                                    <div class="score-circle">
+                                        <svg>
+                                            <circle class="circle-bg" />
+                                            <circle class="circle-progress" id="sleep-progress" stroke-dasharray="0 327" />
+                                        </svg>
+                                        <div class="score-value" id="sleep-score">--</div>
+                                    </div>
+                                </div>
+                                <div class="metric-details">
+                                    <div class="metric-detail">
+                                        <small>Duration</small>
+                                        <div class="value" id="sleep-duration">--</div>
+                                    </div>
+                                    <div class="metric-detail">
+                                        <small>Efficiency</small>
+                                        <div class="value" id="sleep-efficiency">--</div>
+                                    </div>
+                                    <div class="metric-detail">
+                                        <small>Latency</small>
+                                        <div class="value" id="sleep-latency">--</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Readiness Card -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card oura-card h-100 readiness-theme">
+                            <div class="card-header text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-battery-three-quarters me-2"></i>Readiness Score
+                                </h6>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="score-container">
+                                    <div class="score-circle">
+                                        <svg>
+                                            <circle class="circle-bg" />
+                                            <circle class="circle-progress" id="readiness-progress" stroke-dasharray="0 327" />
+                                        </svg>
+                                        <div class="score-value" id="readiness-score">--</div>
+                                    </div>
+                                </div>
+                                <div class="metric-details">
+                                    <div class="metric-detail">
+                                        <small>HRV Balance</small>
+                                        <div class="value" id="hrv-balance">--</div>
+                                    </div>
+                                    <div class="metric-detail">
+                                        <small>Recovery</small>
+                                        <div class="value" id="recovery-index">--</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity Card -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card oura-card h-100 activity-theme">
+                            <div class="card-header text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-running me-2"></i>Activity Score
+                                </h6>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="score-container">
+                                    <div class="score-circle">
+                                        <svg>
+                                            <circle class="circle-bg" />
+                                            <circle class="circle-progress" id="activity-progress" stroke-dasharray="0 327" />
+                                        </svg>
+                                        <div class="score-value" id="activity-score">--</div>
+                                    </div>
+                                </div>
+                                <div class="metric-details">
+                                    <div class="metric-detail">
+                                        <small>Steps</small>
+                                        <div class="value" id="steps">--</div>
+                                    </div>
+                                    <div class="metric-detail">
+                                        <small>Calories</small>
+                                        <div class="value" id="calories">--</div>
+                                    </div>
+                                    <div class="metric-detail">
+                                        <small>Active Cal</small>
+                                        <div class="value" id="active-calories">--</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HRV Card -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card oura-card h-100 hrv-theme">
+                            <div class="card-header text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-heartbeat me-2"></i>Heart Rate Variability
+                                </h6>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="score-container">
+                                    <div class="score-circle">
+                                        <svg>
+                                            <circle class="circle-bg" />
+                                            <circle class="circle-progress" id="hrv-progress" stroke-dasharray="0 327" />
+                                        </svg>
+                                        <div class="score-value" id="hrv-score">--</div>
+                                    </div>
+                                </div>
+                                <div class="metric-details">
+                                    <div class="metric-detail">
+                                        <small>Resting HR</small>
+                                        <div class="value" id="resting-hr">--</div>
+                                    </div>
+                                    <div class="metric-detail">
+                                        <small>HRV (ms)</small>
+                                        <div class="value" id="hrv-ms">--</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        
+        <!-- Charts Section -->
+        <div class="row mb-4" id="charts-section" style="display: none;">
+            <div class="col-12">
+                <div class="card oura-card charts-card">
+                    <div class="card-header text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>7-Day Health Trends
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="trends-chart" width="800" height="400"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

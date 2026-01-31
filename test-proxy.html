@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oura API Test (With Proxy)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h3 class="mb-0">🔧 Oura API Test (With Proxy Fix)</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <strong>Fix Applied:</strong> This test now uses a local proxy server to bypass CORS restrictions.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="api-token" class="form-label">Oura Personal Access Token:</label>
+                            <input type="password" class="form-control" id="api-token" placeholder="Enter your token here">
+                            <small class="text-muted">Get your token from: <a href="https://cloud.ouraring.com/personal-access-tokens" target="_blank">Oura Personal Access Tokens</a></small>
+                        </div>
+                        
+                        <button class="btn btn-success" id="test-proxy">Test Proxy Connection</button>
+                        <button class="btn btn-secondary ms-2" id="clear-logs">Clear Logs</button>
+                        
+                        <hr>
+                        
+                        <div id="results">
+                            <h5>Test Results:</h5>
+                            <pre id="log-output" class="bg-light p-3 border rounded" style="height: 400px; overflow-y: auto; font-size: 12px;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const logOutput = document.getElementById('log-output');
+        
+        function log(message) {
+            const timestamp = new Date().toISOString();
+            logOutput.textContent += `[${timestamp}] ${message}\n`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        document.getElementById('test-proxy').addEventListener('click', async () => {
+            const token = document.getElementById('api-token').value.trim();
+            
+            if (!token) {
+                log('ERROR: Please enter your API token');
+                return;
+            }
+
+            log('=== Testing Proxy Connection ===');
+            log(`Token: ${token.length} chars, starts with: ${token.substring(0, 10)}...`);
+
+            try {
+                log('\n--- Test: Proxy API Call to Personal Info ---');
+                
+                const response = await fetch('/api/oura/personal_info', {
+                    method: 'GET',
+                    headers: {
+                        'X-Oura-Token': token,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                log(`Proxy response status: ${response.status}`);
+                log(`Proxy response status text: ${response.statusText}`);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    log(`Error response: ${errorText}`);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                log('🎉 SUCCESS! Proxy connection working!');
+                log(`Your Oura Data Preview:`);
+                log(`  Age: ${data.age || 'N/A'}`);
+                log(`  Height: ${data.height || 'N/A'}m`);
+                log(`  Weight: ${data.weight || 'N/A'}kg`);
+                log(`  Email: ${data.email || 'N/A'}`);
+                
+                log('\n--- Testing Sleep Data ---');
+                const today = new Date().toISOString().split('T')[0];
+                const sleepResponse = await fetch(`/api/oura/daily_sleep?start_date=${today}&end_date=${today}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Oura-Token': token,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (sleepResponse.ok) {
+                    const sleepData = await sleepResponse.json();
+                    log(`Sleep data available: ${sleepData.data?.length || 0} records found for today`);
+                    if (sleepData.data?.[0]) {
+                        log(`  Sleep score: ${sleepData.data[0].score || 'N/A'}`);
+                    }
+                } else {
+                    log(`Sleep data request failed: ${sleepResponse.status}`);
+                }
+
+                log('\n✅ All tests passed! Your dashboard should now work.');
+
+            } catch (error) {
+                log(`❌ FAILED: ${error.message}`);
+                log(`Error details: ${error.stack}`);
+            }
+
+            log('\n=== Test Complete ===');
+        });
+
+        document.getElementById('clear-logs').addEventListener('click', () => {
+            logOutput.textContent = '';
+            log('Logs cleared. Ready for new test.');
+        });
+
+        // Initial log
+        log('🔧 Oura API Proxy Test Ready');
+        log('This version uses a local proxy to fix CORS issues.');
+        log('Enter your token and click "Test Proxy Connection"');
+    </script>
+</body>
+</html>

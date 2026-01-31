@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oura API Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">Oura API Connection Test</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="api-token" class="form-label">Oura Personal Access Token:</label>
+                            <input type="password" class="form-control" id="api-token" placeholder="Enter your token here">
+                            <small class="text-muted">Get your token from: <a href="https://cloud.ouraring.com/personal-access-tokens" target="_blank">Oura Personal Access Tokens</a></small>
+                        </div>
+                        
+                        <button class="btn btn-primary" id="test-connection">Test Connection</button>
+                        <button class="btn btn-secondary ms-2" id="clear-logs">Clear Logs</button>
+                        
+                        <hr>
+                        
+                        <div id="results">
+                            <h5>Test Results:</h5>
+                            <pre id="log-output" class="bg-light p-3 border rounded" style="height: 400px; overflow-y: auto; font-size: 12px;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const logOutput = document.getElementById('log-output');
+        
+        function log(message) {
+            const timestamp = new Date().toISOString();
+            logOutput.textContent += `[${timestamp}] ${message}\n`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        // Override console.log to capture all logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            log('LOG: ' + args.join(' '));
+        };
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            log('ERROR: ' + args.join(' '));
+        };
+
+        document.getElementById('test-connection').addEventListener('click', async () => {
+            const token = document.getElementById('api-token').value.trim();
+            
+            if (!token) {
+                log('ERROR: Please enter your API token');
+                return;
+            }
+
+            log('=== Starting API Connection Test ===');
+            log(`Token format check: ${token.length} characters, starts with: ${token.substring(0, 10)}...`);
+
+            // Test 1: Basic fetch to Oura API
+            log('\n--- Test 1: Direct API Call ---');
+            try {
+                const url = 'https://api.ouraring.com/v2/usercollection/personal_info';
+                log(`Making request to: ${url}`);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    },
+                    mode: 'cors'
+                });
+
+                log(`Response status: ${response.status}`);
+                log(`Response status text: ${response.statusText}`);
+                
+                // Log response headers
+                log('Response headers:');
+                for (let [key, value] of response.headers.entries()) {
+                    log(`  ${key}: ${value}`);
+                }
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    log(`Error response body: ${errorText}`);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                log('SUCCESS: API connection working!');
+                log(`Personal info: ${JSON.stringify(data, null, 2)}`);
+
+            } catch (error) {
+                log(`FAILED: ${error.message}`);
+                log(`Error type: ${error.constructor.name}`);
+                log(`Error details: ${JSON.stringify(error, Object.getOwnPropertyNames(error))}`);
+            }
+
+            // Test 2: Network connectivity
+            log('\n--- Test 2: Network Connectivity Test ---');
+            try {
+                const testResponse = await fetch('https://httpbin.org/get', {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                log(`Network test response: ${testResponse.status}`);
+                if (testResponse.ok) {
+                    log('Network connectivity: OK');
+                } else {
+                    log('Network connectivity: Issues detected');
+                }
+            } catch (error) {
+                log(`Network test failed: ${error.message}`);
+            }
+
+            // Test 3: HTTPS requirement test
+            log('\n--- Test 3: HTTPS vs HTTP test ---');
+            try {
+                // Try HTTP first (should fail)
+                const httpUrl = 'http://api.ouraring.com/v2/usercollection/personal_info';
+                log(`Trying HTTP: ${httpUrl}`);
+                
+                const httpResponse = await fetch(httpUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    },
+                    mode: 'cors'
+                });
+                
+                log(`HTTP response status: ${httpResponse.status}`);
+            } catch (error) {
+                log(`HTTP request failed (expected): ${error.message}`);
+            }
+
+            log('\n=== Test Complete ===');
+        });
+
+        document.getElementById('clear-logs').addEventListener('click', () => {
+            logOutput.textContent = '';
+        });
+
+        // Initial log
+        log('Oura API Test Tool Ready');
+        log('Enter your API token and click "Test Connection" to diagnose issues');
+    </script>
+</body>
+</html>
